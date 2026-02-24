@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: speech-main
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    autoDeploy: true
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: APP_ADMIN_EMAIL
+        sync: false
+      - key: APP_ADMIN_PASSWORD
+        sync: false
+      - key: WHISPER_MODEL
+        value: base
+      - key: WHISPER_CACHE_DIR
+        value: /opt/render/project/src/models
+      - key: FIREBASE_CREDENTIALS
+        value: /etc/secrets/firebase-admin-key.json
