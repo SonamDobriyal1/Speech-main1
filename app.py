@@ -43,6 +43,18 @@ ROLE_OPTIONS = {"admin", "user"}
 USERS: dict[str, dict[str, str]] = {}
 
 IST = timezone(timedelta(hours=5, minutes=30))
+FIRESTORE_CACHE_TTL_SECONDS = int(os.environ.get("FIRESTORE_CACHE_TTL_SECONDS", "300"))
+FIRESTORE_STREAM_TIMEOUT_SECONDS = float(os.environ.get("FIRESTORE_STREAM_TIMEOUT_SECONDS", "5"))
+FIRESTORE_LAST_REFRESH: dict[str, datetime] = {}
+
+
+def _should_refresh(cache_key: str) -> bool:
+    if FIRESTORE_CACHE_TTL_SECONDS <= 0:
+        return True
+    last = FIRESTORE_LAST_REFRESH.get(cache_key)
+    if last is None:
+        return True
+    return (datetime.now(timezone.utc) - last).total_seconds() >= FIRESTORE_CACHE_TTL_SECONDS
 
 
 def _store_user(email: str, password_hash: str, role: str = "user") -> None:
@@ -85,7 +97,9 @@ def _fetch_user_from_firestore(email: str) -> Optional[dict[str, str]]:
     if client is None:
         return None
     try:
-        document = client.collection("users").document(email.lower()).get()
+        document = client.collection("users").document(email.lower()).get(
+            timeout=FIRESTORE_STREAM_TIMEOUT_SECONDS
+        )
     except Exception as exc:  # pragma: no cover - remote call safety
         app.logger.warning("Failed to fetch user from Firestore: %s", exc)
         return None
@@ -123,27 +137,37 @@ def _delete_user_from_firestore(email: str) -> None:
 
 
 
-def _refresh_users_from_firestore() -> None:
+def _refresh_users_from_firestore(force: bool = False) -> None:
     client = _get_firestore_client()
     if client is None:
         return
+    if not force and not _should_refresh("users"):
+        return
+    success = False
     try:
-        documents = client.collection("users").stream()
+        documents = list(
+            client.collection("users").stream(timeout=FIRESTORE_STREAM_TIMEOUT_SECONDS)
+        )
     except Exception as exc:  # pragma: no cover - remote call safety
         app.logger.warning("Failed to refresh users from Firestore: %s", exc)
+    else:
+        for document in documents:
+            data = document.to_dict() or {}
+            email = (data.get("email") or document.id or "").strip()
+            password_hash = data.get("password_hash")
+            if not email or not password_hash:
+                continue
+            role = data.get("role", "user")
+            USERS[email.lower()] = {
+                "email": email,
+                "password_hash": password_hash,
+                "role": role,
+            }
+        success = True
+    finally:
+        FIRESTORE_LAST_REFRESH["users"] = datetime.now(timezone.utc)
+    if not success:
         return
-    for document in documents:
-        data = document.to_dict() or {}
-        email = (data.get("email") or document.id or "").strip()
-        password_hash = data.get("password_hash")
-        if not email or not password_hash:
-            continue
-        role = data.get("role", "user")
-        USERS[email.lower()] = {
-            "email": email,
-            "password_hash": password_hash,
-            "role": role,
-        }
 
 
 SENTENCES = [
@@ -209,9 +233,9 @@ def init_firebase() -> None:
         app.logger.warning("Firestore client initialisation failed: %s", exc)
         FIRESTORE_CLIENT = None
     else:
-        _refresh_users_from_firestore()
-        _refresh_sentences_from_firestore()
-        _refresh_paragraphs_from_firestore()
+        _refresh_users_from_firestore(force=True)
+        _refresh_sentences_from_firestore(force=True)
+        _refresh_paragraphs_from_firestore(force=True)
 
 
 
@@ -222,89 +246,113 @@ def _get_firestore_client() -> Optional[Any]:
     return FIRESTORE_CLIENT
 
 
-def _refresh_sentences_from_firestore() -> None:
+def _refresh_sentences_from_firestore(force: bool = False) -> None:
     if firestore is None:
         return
     client = _get_firestore_client()
     if client is None:
         return
+    if not force and not _should_refresh("sentences"):
+        return
+    success = False
     try:
-        documents = list(client.collection(PRACTICE_SENTENCES_COLLECTION).stream())
+        documents = list(
+            client.collection(PRACTICE_SENTENCES_COLLECTION).stream(
+                timeout=FIRESTORE_STREAM_TIMEOUT_SECONDS
+            )
+        )
     except Exception as exc:  # pragma: no cover - remote call safety
         app.logger.warning("Failed to refresh practice sentences: %s", exc)
-        return
-
-    if not documents:
-        # Seed Firestore with the default sentences once.
-        try:
-            batch = client.batch()
-            for item in SENTENCES:
-                doc_ref = client.collection(PRACTICE_SENTENCES_COLLECTION).document(str(item["id"]))
-                batch.set(doc_ref, {"id": item["id"], "text": item["text"]})
-            batch.commit()
-        except Exception as exc:  # pragma: no cover - remote call safety
-            app.logger.warning("Failed to seed practice sentences: %s", exc)
+    else:
+        if not documents:
+            # Seed Firestore with the default sentences once.
+            try:
+                batch = client.batch()
+                for item in SENTENCES:
+                    doc_ref = client.collection(PRACTICE_SENTENCES_COLLECTION).document(str(item["id"]))
+                    batch.set(doc_ref, {"id": item["id"], "text": item["text"]})
+                batch.commit()
+            except Exception as exc:  # pragma: no cover - remote call safety
+                app.logger.warning("Failed to seed practice sentences: %s", exc)
+                return
+            success = True
             return
+
+        loaded: list[dict[str, Any]] = []
+        for document in documents:
+            data = document.to_dict() or {}
+            try:
+                sentence_id = int(data.get("id") or document.id)
+            except (TypeError, ValueError):
+                continue
+            text = (data.get("text") or "").strip()
+            if not text:
+                continue
+            loaded.append({"id": sentence_id, "text": text})
+
+        if loaded:
+            loaded.sort(key=lambda item: item["id"])
+            SENTENCES.clear()
+            SENTENCES.extend(loaded)
+        success = True
+    finally:
+        FIRESTORE_LAST_REFRESH["sentences"] = datetime.now(timezone.utc)
+    if not success:
         return
 
-    loaded: list[dict[str, Any]] = []
-    for document in documents:
-        data = document.to_dict() or {}
-        try:
-            sentence_id = int(data.get("id") or document.id)
-        except (TypeError, ValueError):
-            continue
-        text = (data.get("text") or "").strip()
-        if not text:
-            continue
-        loaded.append({"id": sentence_id, "text": text})
 
-    if loaded:
-        loaded.sort(key=lambda item: item["id"])
-        SENTENCES.clear()
-        SENTENCES.extend(loaded)
-
-
-def _refresh_paragraphs_from_firestore() -> None:
+def _refresh_paragraphs_from_firestore(force: bool = False) -> None:
     if firestore is None:
         return
     client = _get_firestore_client()
     if client is None:
         return
+    if not force and not _should_refresh("paragraphs"):
+        return
+    success = False
     try:
-        documents = list(client.collection(PRACTICE_PARAGRAPHS_COLLECTION).stream())
+        documents = list(
+            client.collection(PRACTICE_PARAGRAPHS_COLLECTION).stream(
+                timeout=FIRESTORE_STREAM_TIMEOUT_SECONDS
+            )
+        )
     except Exception as exc:  # pragma: no cover - remote call safety
         app.logger.warning("Failed to refresh practice paragraphs: %s", exc)
-        return
-
-    if not documents:
-        try:
-            batch = client.batch()
-            for item in PARAGRAPHS:
-                doc_ref = client.collection(PRACTICE_PARAGRAPHS_COLLECTION).document(str(item["id"]))
-                batch.set(doc_ref, {"id": item["id"], "text": item["text"]})
-            batch.commit()
-        except Exception as exc:  # pragma: no cover - remote call safety
-            app.logger.warning("Failed to seed practice paragraphs: %s", exc)
+    else:
+        if not documents:
+            try:
+                batch = client.batch()
+                for item in PARAGRAPHS:
+                    doc_ref = client.collection(PRACTICE_PARAGRAPHS_COLLECTION).document(str(item["id"]))
+                    batch.set(doc_ref, {"id": item["id"], "text": item["text"]})
+                batch.commit()
+            except Exception as exc:  # pragma: no cover - remote call safety
+                app.logger.warning("Failed to seed practice paragraphs: %s", exc)
+                return
+            success = True
             return
+
+        loaded: list[dict[str, Any]] = []
+        for document in documents:
+            data = document.to_dict() or {}
+            try:
+                paragraph_id = int(data.get("id") or document.id)
+            except (TypeError, ValueError):
+                continue
+            text = (data.get("text") or "").strip()
+            if not text:
+                continue
+            loaded.append({"id": paragraph_id, "text": text})
+
+        if loaded:
+            loaded.sort(key=lambda item: item["id"])
+            PARAGRAPHS.clear()
+            PARAGRAPHS.extend(loaded)
+        success = True
+    finally:
+        FIRESTORE_LAST_REFRESH["paragraphs"] = datetime.now(timezone.utc)
+    if not success:
         return
-
-    loaded: list[dict[str, Any]] = []
-    for document in documents:
-        data = document.to_dict() or {}
-        try:
-            paragraph_id = int(data.get("id") or document.id)
-        except (TypeError, ValueError):
-            continue
-        text = (data.get("text") or "").strip()
-        if not text:
-            continue
-        loaded.append({"id": paragraph_id, "text": text})
-
-    if loaded:
-        loaded.sort(key=lambda item: item["id"])
-        PARAGRAPHS.clear()
-        PARAGRAPHS.extend(loaded)
 
 
 def _persist_sentence_to_firestore(sentence: dict[str, Any]) -> None:
@@ -438,7 +486,7 @@ def fetch_progress_entries(user_id: str, limit: int = 50) -> list[dict[str, Any]
                 .order_by("created_at", direction=firestore.Query.DESCENDING)
                 .limit(limit)
             )
-            for document in query.stream():
+            for document in query.stream(timeout=FIRESTORE_STREAM_TIMEOUT_SECONDS):
                 payload = document.to_dict() or {}
                 payload.setdefault("id", document.id)
                 payload["created_at"] = _coerce_timestamp(payload.get("created_at"))
