@@ -186,7 +186,7 @@ PARAGRAPHS = [
 PRACTICE_SENTENCES_COLLECTION = "practice_sentences"
 PRACTICE_PARAGRAPHS_COLLECTION = "practice_paragraphs"
 
-WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL", "base")
+WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL", "tiny")
 MODEL_CACHE_DIR = Path(os.environ.get("WHISPER_CACHE_DIR", Path.cwd() / "models"))
 _MODEL: Optional[whisper.Whisper] = None
 
