@@ -3,7 +3,7 @@ services:
     name: speech-main
     env: python
     plan: free
-    buildCommand: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.2.2 && pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 180
     autoDeploy: true
     envVars:
