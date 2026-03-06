@@ -1059,5 +1059,42 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Render."""
+    return jsonify({
+        "status": "healthy", 
+        "model_loaded": _MODEL is not None,
+        "firebase_initialized": FIRESTORE_CLIENT is not None
+    }), 200
+
+
+# Initialize model and Firebase on module import (for production)
+def _initialize_on_startup():
+    """Initialize model and Firebase when the module is imported."""
+    import threading
+    
+    def init_in_background():
+        try:
+            app.logger.info("Pre-loading Whisper model in background...")
+            load_model()
+            app.logger.info("Whisper model loaded successfully")
+        except Exception as exc:
+            app.logger.error(f"Failed to pre-load Whisper model: {exc}")
+        
+        try:
+            init_firebase()
+        except Exception as exc:
+            app.logger.error(f"Failed to initialize Firebase: {exc}")
+    
+    # Start initialization in background thread to not block startup
+    thread = threading.Thread(target=init_in_background, daemon=True)
+    thread.start()
+
+
+# Initialize on module import
+_initialize_on_startup()
+
+
 if __name__ == "__main__":
     app.run(debug=True)
