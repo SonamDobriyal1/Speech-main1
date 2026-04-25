@@ -1,95 +1,239 @@
 ﻿{% extends "base.html" %}
-
-{% block title %}Dashboard - Speech Practice Coach{% endblock %}
+{% block title %}My Progress — Sambhav{% endblock %}
 
 {% block content %}
-<section class="space-y-8">
-  <header class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+<div class="animate-fade-up space-y-6">
+
+  <!-- Greeting row -->
+  <div class="flex items-start justify-between">
     <div>
-      <p class="text-sm uppercase tracking-[0.3em] text-cyan-200/80">Progress overview</p>
-      <h1 class="mt-2 font-display text-3xl font-semibold text-white">Welcome back, {{ current_user.id }}</h1>
-      <p class="mt-3 text-sm text-slate-200/80">Track how your pronunciation is improving each time you practise with the Speech Coach.</p>
+      <h1 class="text-3xl font-900 text-forest flex items-center gap-2" style="font-weight:900;color:#166534;" id="greeting">
+        Good day
+        <span class="animate-wiggle inline-block">👋</span>
+        <span class="animate-bounce-slow inline-block">⭐</span>
+      </h1>
+      <p class="mt-1 text-base font-600 text-green-600" style="font-weight:600;">Ready to practise with Sambhav today?</p>
     </div>
-    <a href="{{ url_for('coach') }}" class="inline-flex items-center rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200">Start a new practice</a>
-  </header>
+    <!-- Avatar bubble -->
+    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-purple-600 text-xl font-900 text-white shadow-lg" style="font-weight:900;">
+      {{ current_user.id[0].upper() if current_user.id else 'K' }}
+    </div>
+  </div>
 
-  <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <article class="rounded-2xl border border-white/10 bg-slate-900/50 p-5 backdrop-blur-xl">
-      <p class="text-xs uppercase tracking-wider text-slate-300/70">Total sessions</p>
-      <p class="mt-3 text-3xl font-semibold text-white">{{ progress.total_sessions }}</p>
-    </article>
-    <article class="rounded-2xl border border-white/10 bg-slate-900/50 p-5 backdrop-blur-xl">
-      <p class="text-xs uppercase tracking-wider text-slate-300/70">Average score</p>
-      <p class="mt-3 text-3xl font-semibold text-white">
-        {% if progress.average_score is not none %}
-        {{ '%.0f' % (progress.average_score|float) }}%
-        {% else %}
-        --
-        {% endif %}
-      </p>
-    </article>
-    <article class="rounded-2xl border border-white/10 bg-slate-900/50 p-5 backdrop-blur-xl">
-      <p class="text-xs uppercase tracking-wider text-slate-300/70">Best score</p>
-      <p class="mt-3 text-3xl font-semibold text-cyan-300">
-        {% if progress.best_score is not none %}
-        {{ '%.0f' % (progress.best_score|float) }}%
-        {% else %}
-        --
-        {% endif %}
-      </p>
-    </article>
-    <article class="rounded-2xl border border-white/10 bg-slate-900/50 p-5 backdrop-blur-xl">
-      <p class="text-xs uppercase tracking-wider text-slate-300/70">Last session</p>
-      <p class="mt-3 text-sm text-slate-200/80">
-        {% if progress.last_practiced %}
-        {{ progress.last_practiced.strftime('%d %b %Y %H:%M %Z') if progress.last_practiced.tzinfo else progress.last_practiced.strftime('%d %b %Y %H:%M') }}
-        {% else %}
-        No sessions yet
-        {% endif %}
-      </p>
-      {% if progress.last_score is not none %}
-      <p class="text-2xl font-semibold text-white">{{ '%.0f' % (progress.last_score|float) }}%</p>
-      {% endif %}
-    </article>
-  </section>
+  <!-- Main grid -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-  <section class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-panel backdrop-blur-xl">
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <h2 class="font-display text-xl font-semibold text-white">Recent practice sessions</h2>
-        <p class="text-sm text-slate-200/70">Scores are saved each time you finish a recording.</p>
+    <!-- Left col (hero + bottom stats) -->
+    <div class="space-y-5 lg:col-span-2">
+
+      <!-- Hero card -->
+      <div class="hero-grad card relative overflow-hidden p-7" style="border-radius:1.5rem;">
+        <!-- Decorative blobs -->
+        <div class="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10"></div>
+        <div class="pointer-events-none absolute -bottom-10 -right-4 h-52 w-52 rounded-full bg-white/5"></div>
+
+        <div class="relative z-10">
+          <div class="mb-4 flex items-center gap-2">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+              <span class="text-lg">🎙️</span>
+            </div>
+            <span class="text-xs font-800 uppercase tracking-widest text-white/80" style="font-weight:800;">RECOMMENDED
+              <span class="ml-1 inline-block h-2 w-2 rounded-full bg-green-400 animate-pulse-ring align-middle"></span>
+            </span>
+          </div>
+
+          <h2 class="text-2xl font-900 text-white" style="font-weight:900;">Voice Coach Session</h2>
+          <p class="mt-2 max-w-sm text-sm font-600 text-white/80 leading-relaxed" style="font-weight:600;">
+            Continue your daily practice with guided sessions focused on clarity and tone.
+          </p>
+
+          <a href="{{ url_for('coach') }}" class="btn-white mt-6 inline-flex">
+            Start Practice
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+          </a>
+        </div>
       </div>
-      <a href="{{ url_for('coach') }}" class="hidden rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-300 hover:text-cyan-100 md:inline-flex">Record again</a>
+
+      <!-- Bottom stat row -->
+      <div class="grid grid-cols-2 gap-5">
+
+        <!-- Words spoken -->
+        <div class="card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100">
+              <span class="text-lg">🔊</span>
+            </div>
+            <span class="text-sm font-700 text-gray-500" style="font-weight:700;">Sessions</span>
+          </div>
+          <p class="text-4xl font-900 text-gray-900 leading-none" style="font-weight:900;">{{ progress.total_sessions }}</p>
+          <p class="mt-1 text-xs font-600 text-gray-400" style="font-weight:600;">Total sessions recorded</p>
+        </div>
+
+        <!-- Today's progress / best score -->
+        <div class="card p-5 relative overflow-hidden">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-100">
+              <span class="text-lg">📈</span>
+            </div>
+            <div>
+              <p class="text-sm font-700 text-gray-700" style="font-weight:700;">Best Score</p>
+              <p class="text-[11px] font-600 text-gray-400" style="font-weight:600;">Your personal best</p>
+            </div>
+          </div>
+
+          {% if progress.best_score is not none %}
+          {% set best = (progress.best_score|float)|round|int %}
+          <div class="mt-1">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-3xl font-900 text-gray-900" style="font-weight:900;">{{ best }}%</span>
+            </div>
+            <div class="h-3 w-full rounded-full bg-gray-100 overflow-hidden">
+              <div class="h-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-700 transition-all duration-1000" style="width:{{ best }}%"></div>
+            </div>
+          </div>
+          {% else %}
+          <p class="text-lg font-700 text-gray-400 mt-2" style="font-weight:700;">No sessions yet 😊</p>
+          {% endif %}
+
+          <!-- Star mascot -->
+          <div class="pointer-events-none absolute -bottom-2 -right-2 text-5xl animate-bounce-slow select-none">⭐</div>
+        </div>
+      </div>
     </div>
 
-    {% if entries %}
-    <div class="mt-6 overflow-x-auto">
-      <table class="min-w-full divide-y divide-white/10 text-sm text-slate-100">
-        <thead class="bg-white/5 text-xs uppercase tracking-wide text-slate-300/80">
+    <!-- Right col: stat cards -->
+    <div class="space-y-5">
+
+      <!-- Accuracy -->
+      <div class="card p-6">
+        <p class="text-sm font-700 text-gray-500 mb-1" style="font-weight:700;">Accuracy</p>
+        {% if progress.average_score is not none %}
+        {% set avg = (progress.average_score|float)|round|int %}
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-4xl font-900 text-gray-900" style="font-weight:900;">{{ avg }}%</span>
+            <span class="ml-1 text-xs font-700 text-green-500" style="font-weight:700;">▲ Great!</span>
+            <p class="mt-1 text-xs font-600 text-gray-400" style="font-weight:600;">Average score</p>
+          </div>
+          <!-- Circular progress -->
+          <div class="relative flex-shrink-0">
+            <svg class="progress-ring h-16 w-16" viewBox="0 0 56 56">
+              <circle class="ring-bg" cx="28" cy="28" r="22" fill="none" stroke-width="5"/>
+              <circle class="ring-teal" cx="28" cy="28" r="22" fill="none" stroke-width="5"
+                      stroke-linecap="round"
+                      stroke-dasharray="{{ (avg / 100 * 138.23)|round(2) }} 138.23"
+                      style="transition:stroke-dasharray 1s ease;"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[11px] font-900 text-gray-700" style="font-weight:900;">{{ avg }}%</span>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-2xl font-900 text-gray-400 mt-2" style="font-weight:900;">--</p>
+        <p class="text-xs font-600 text-gray-400 mt-1" style="font-weight:600;">No sessions yet</p>
+        {% endif %}
+      </div>
+
+      <!-- Current Streak (using sessions as streak proxy) -->
+      <div class="card p-6">
+        <p class="text-sm font-700 text-gray-500 mb-2" style="font-weight:700;">Current Streak</p>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-3xl font-900 text-gray-900" style="font-weight:900;">{{ progress.total_sessions }} <span class="text-xl">🔥</span></p>
+            <p class="mt-0.5 text-xs font-600 text-gray-400" style="font-weight:600;">Keep it up!</p>
+          </div>
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-2xl animate-bounce-slow">🏆</div>
+        </div>
+
+        <!-- Encouragement popup -->
+        {% if progress.total_sessions > 0 %}
+        <div class="mt-4 rounded-2xl bg-purple-50 border-2 border-purple-100 px-4 py-3">
+          <p class="text-sm font-800 text-purple-700" style="font-weight:800;">You're doing great! 🌟</p>
+          <p class="text-xs font-600 text-purple-500 mt-0.5" style="font-weight:600;">Keep going ⭐</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Last session -->
+      <div class="card p-6">
+        <p class="text-sm font-700 text-gray-500 mb-2" style="font-weight:700;">Last Session</p>
+        {% if progress.last_score is not none %}
+        <p class="text-3xl font-900 text-purple-600" style="font-weight:900;">{{ '%.0f' % (progress.last_score|float) }}%</p>
+        {% else %}
+        <p class="text-2xl font-900 text-gray-300" style="font-weight:900;">--</p>
+        {% endif %}
+        <p class="mt-1 text-xs font-600 text-gray-400" style="font-weight:600;">
+          {% if progress.last_practiced %}
+            {{ progress.last_practiced.strftime('%d %b %Y') }}
+          {% else %}
+            No sessions yet 🎈
+          {% endif %}
+        </p>
+        {% if progress.total_sessions == 0 %}
+        <a href="{{ url_for('coach') }}" class="btn-primary mt-3 text-xs px-4 py-2">Start now! 🎤</a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Session history table -->
+  {% if entries %}
+  <div class="card overflow-hidden" style="border-radius:1.5rem;">
+    <div class="flex items-center justify-between border-b-2 border-[#e8f5f0] px-6 py-5">
+      <div>
+        <h2 class="font-800 text-gray-800 text-base" style="font-weight:800;">📋 Recent Sessions</h2>
+        <p class="text-xs font-600 text-gray-400 mt-0.5" style="font-weight:600;">Your practice history</p>
+      </div>
+      <a href="{{ url_for('coach') }}" class="btn-outline text-xs px-4 py-2">Practice again 🎙️</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th scope="col" class="px-4 py-3 text-left">Date</th>
-            <th scope="col" class="px-4 py-3 text-left">Sentence</th>
-            <th scope="col" class="px-4 py-3 text-left">Transcript</th>
-            <th scope="col" class="px-4 py-3 text-right">Score</th>
+            <th>Date</th>
+            <th>Sentence</th>
+            <th>What you said</th>
+            <th>Score</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/5">
+        <tbody>
           {% for entry in entries %}
-          <tr class="bg-black/10 hover:bg-black/20">
-            <td class="px-4 py-3 align-top whitespace-nowrap">{{ entry.created_at.strftime('%d %b %Y %H:%M') if entry.created_at else '' }}</td>
-            <td class="px-4 py-3 align-top text-sm text-white/90">{{ entry.target or 'Sentence ' ~ entry.sentence_id }}</td>
-            <td class="px-4 py-3 align-top text-xs text-slate-200/80">{{ entry.transcript or '--' }}</td>
-            <td class="px-4 py-3 align-top text-right text-base font-semibold text-cyan-300">{{ '%.0f' % (entry.score|float) }}%</td>
+          {% set score = entry.score|float %}
+          <tr>
+            <td class="text-xs text-gray-400 whitespace-nowrap">{{ entry.created_at.strftime('%d %b %Y, %H:%M') if entry.created_at else '—' }}</td>
+            <td class="text-gray-700 text-sm">{{ entry.target or 'Sentence ' ~ entry.sentence_id }}</td>
+            <td class="text-xs text-gray-500">{{ entry.transcript or '—' }}</td>
+            <td>
+              <span class="badge {% if score >= 80 %}badge-green{% elif score >= 50 %}badge-yellow{% else %}badge-red{% endif %}">
+                {{ '%.0f' % score }}%
+                {% if score >= 80 %}🌟{% elif score >= 50 %}👍{% else %}💪{% endif %}
+              </span>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% else %}
-    <div class="mt-6 rounded-2xl border border-dashed border-white/20 bg-black/20 p-8 text-center text-sm text-slate-200/80">
-      <p>No practice sessions saved yet. Record your first attempt to start tracking your progress.</p>
+  </div>
+  {% else %}
+  <div class="card flex flex-col items-center justify-center gap-4 py-16 text-center" style="border-radius:1.5rem;">
+    <div class="text-6xl animate-bounce-slow">🎤</div>
+    <div>
+      <p class="font-800 text-gray-600 text-base" style="font-weight:800;">No sessions yet!</p>
+      <p class="mt-1 text-sm font-600 text-gray-400" style="font-weight:600;">Record your first attempt to start tracking your progress 🌟</p>
     </div>
-    {% endif %}
-  </section>
-</section>
+    <a href="{{ url_for('coach') }}" class="btn-primary px-6 py-3">Let's start practising! 🚀</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  // Time-based greeting
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greeting').childNodes[0].textContent = greet + ' ';
+</script>
 {% endblock %}

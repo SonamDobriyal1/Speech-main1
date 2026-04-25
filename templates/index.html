@@ -1,116 +1,195 @@
 {% extends "base.html" %}
-
-{% block title %}Speech Coach - Speech Practice Coach{% endblock %}
+{% block title %}Practice Now — Sambhav{% endblock %}
 
 {% block content %}
-<section class="space-y-8">
-  <header>
-    <p class="text-sm uppercase tracking-[0.3em] text-cyan-200/80">Speech Coach</p>
-    <h1 class="mt-2 font-display text-3xl font-semibold text-white">Record, compare, and refine your delivery</h1>
-    <p class="mt-3 text-sm text-slate-200/80">Choose a sentence or paragraph, record your attempt, and receive instant similarity scores.</p>
-  </header>
+<div class="animate-fade-up space-y-6">
 
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-900 text-forest flex items-center gap-2" style="font-weight:900;color:#166534;">
+        Practice Time! <span class="animate-wiggle inline-block">🎙️</span>
+      </h1>
+      <p class="mt-1 text-sm font-600 text-gray-500" style="font-weight:600;">Choose a sentence, record yourself, and get your score! 🌟</p>
+    </div>
+    <div class="text-5xl animate-bounce-slow hidden sm:block">⭐</div>
+  </div>
+
+  <!-- Flash messages -->
   {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-  {% set alert_styles = {
-    'danger': 'border-rose-400/60 bg-rose-500/10 text-rose-100',
-    'success': 'border-emerald-400/60 bg-emerald-500/10 text-emerald-100',
-    'info': 'border-sky-400/60 bg-sky-500/10 text-sky-100'
-  } %}
-  <div class="space-y-3">
+  <div class="space-y-2">
     {% for category, message in messages %}
-    {% set level = 'danger' if category == 'error' else 'success' if category == 'success' else 'info' %}
-    <div class="flex items-start justify-between gap-4 rounded-2xl border px-4 py-3 text-sm {{ alert_styles[level] }}">
+    {% set cls = 'alert-danger' if category == 'error' else ('alert-success' if category == 'success' else 'alert-info') %}
+    <div class="{{ cls }} flex items-start justify-between gap-4">
       <span>{{ message }}</span>
-      <button type="button" class="text-lg leading-none text-white/70 transition hover:text-white" onclick="this.parentElement.remove()">&times;</button>
+      <button type="button" class="text-base leading-none opacity-60 hover:opacity-100 font-800" style="font-weight:800;" onclick="this.parentElement.remove()">✕</button>
     </div>
     {% endfor %}
   </div>
   {% endif %}
   {% endwith %}
 
-  <section class="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-panel backdrop-blur-xl">
-    <h2 class="text-sm font-semibold text-slate-100">Choose practice mode</h2>
-    <div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex flex-wrap gap-4">
-        <label class="inline-flex items-center gap-2 text-sm text-slate-100/90">
-          <input type="radio" name="contentType" value="sentence" class="h-4 w-4 border-white/30 bg-transparent text-cyan-400 focus:ring-cyan-300" checked>
-          <span>Sentences</span>
-        </label>
-        <label class="inline-flex items-center gap-2 text-sm text-slate-100/90">
-          <input type="radio" name="contentType" value="paragraph" class="h-4 w-4 border-white/30 bg-transparent text-cyan-400 focus:ring-cyan-300">
-          <span>Paragraphs</span>
-        </label>
-      </div>
-    
-    </div>
-    <p class="mt-3 text-xs text-slate-200/70">Switch modes, then tap Next to cycle through available practice passages.</p>
-  </section>
-  <section class="rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-panel backdrop-blur-xl">
-    
-    <h2 id="contentHeading" class="font-display text-lg font-semibold text-white">{{ 'Practice Sentence' if sentences else ('Practice Paragraph' if paragraphs else 'Practice Content') }}</h2>
-    <p id="targetContent" class="mt-2 text-lg text-slate-100/90">{{ sentences[0].text if sentences else (paragraphs[0].text if paragraphs else '') }}</p>
-    <div class="py-2">
-      <button id="nextContent" class="inline-flex items-center justify-center rounded-xl border border-white/30 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-300 hover:text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300">
-        Next
-      </button>
-      </div>
-    
-  </section>
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 
-  <section class="rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-panel backdrop-blur-xl">
-    <div class="flex flex-col gap-4 sm:flex-row">
-      <button id="startBtn" class="inline-flex w-full items-center justify-center rounded-xl bg-cyan-500 px-4 py-3 text-base font-semibold text-slate-900 transition hover:bg-cyan-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200">Start Recording</button>
-      <button id="stopBtn" class="inline-flex w-full items-center justify-center rounded-xl bg-slate-700 px-4 py-3 text-base font-semibold text-white transition hover:bg-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-200 disabled:cursor-not-allowed disabled:bg-slate-800/60" disabled>Stop Recording</button>
-    </div>
-    <p class="mt-4 text-sm text-slate-200/80" id="statusMessage">Press start to begin recording.</p>
-  </section>
+    <!-- Left col -->
+    <div class="space-y-5 xl:col-span-2">
 
-  <section class="rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-panel backdrop-blur-xl" id="attentionSection">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div>
-        <h2 class="font-display text-lg font-semibold text-white">Attention tracking (optional)</h2>
-        <p class="mt-2 text-sm text-slate-200/80">Uses on-device MediaPipe face landmarks to estimate whether you're looking at the screen. Nothing is stored or uploaded.</p>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <button id="startCameraBtn" class="inline-flex items-center justify-center rounded-xl bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-200">Start camera</button>
-          <button id="stopCameraBtn" class="inline-flex items-center justify-center rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-200" disabled>Stop camera</button>
+      <!-- Practice mode selector -->
+      <div class="card p-6" style="border-radius:1.5rem;">
+        <h2 class="font-800 text-gray-800 mb-4 flex items-center gap-2" style="font-weight:800;">
+          🎯 Choose your practice mode
+        </h2>
+        <div class="flex flex-wrap gap-3">
+          <label class="cursor-pointer">
+            <input type="radio" name="contentType" value="sentence" class="sr-only peer" checked>
+            <div class="rounded-2xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-700 text-gray-500 transition-all peer-checked:border-purple-400 peer-checked:bg-purple-50 peer-checked:text-purple-700 hover:border-purple-200" style="font-weight:700;">
+              📝 Sentences
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="contentType" value="paragraph" class="sr-only peer">
+            <div class="rounded-2xl border-2 border-gray-200 bg-white px-5 py-3 text-sm font-700 text-gray-500 transition-all peer-checked:border-purple-400 peer-checked:bg-purple-50 peer-checked:text-purple-700 hover:border-purple-200" style="font-weight:700;">
+              📖 Paragraphs
+            </div>
+          </label>
         </div>
-        <div class="mt-4 grid gap-3 text-sm text-slate-200/90 sm:grid-cols-2">
-          <div class="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-            <p class="text-xs uppercase tracking-wide text-slate-300/70">Attention</p>
-            <p id="attentionScore" class="mt-2 text-2xl font-semibold text-emerald-300">--%</p>
+        <p class="mt-3 text-xs font-600 text-gray-400" style="font-weight:600;">Tap Next to see different practice passages.</p>
+      </div>
+
+      <!-- Target sentence card -->
+      <div class="hero-grad card relative overflow-hidden p-7" style="border-radius:1.5rem;">
+        <div class="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10"></div>
+        <div class="relative z-10">
+          <p id="contentHeading" class="text-xs font-800 uppercase tracking-widest text-white/70 mb-2" style="font-weight:800;">
+            🎯 {{ 'Practice Sentence' if sentences else ('Practice Paragraph' if paragraphs else 'Practice') }}
+          </p>
+          <p id="targetContent" class="text-xl font-800 text-white leading-relaxed" style="font-weight:800;">
+            {{ sentences[0].text if sentences else (paragraphs[0].text if paragraphs else '') }}
+          </p>
+          <button id="nextContent" class="btn-white mt-5 text-sm px-5 py-2.5">
+            Next sentence
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Recording controls -->
+      <div class="card p-6" style="border-radius:1.5rem;">
+        <h2 class="font-800 text-gray-800 mb-4 flex items-center gap-2" style="font-weight:800;">🔴 Recording</h2>
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <button id="startBtn" class="btn-primary flex-1 justify-center py-3.5 text-base">
+            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="6"/>
+            </svg>
+            Start Recording
+          </button>
+          <button id="stopBtn" disabled
+            class="flex-1 inline-flex items-center justify-center gap-2 rounded-full border-2 border-gray-200 bg-gray-50 px-5 py-3.5 text-base font-700 text-gray-400 transition disabled:cursor-not-allowed enabled:border-red-300 enabled:bg-red-50 enabled:text-red-600 enabled:hover:bg-red-100"
+            style="font-weight:700;">
+            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="1"/>
+            </svg>
+            Stop
+          </button>
+        </div>
+        <div class="mt-4 flex items-center gap-3 rounded-2xl bg-[#f0faf5] border-2 border-[#d0ece3] px-4 py-3">
+          <div class="h-2.5 w-2.5 rounded-full bg-green-400 animate-pulse-ring flex-shrink-0" id="recordingDot"></div>
+          <p class="text-sm font-600 text-gray-600" id="statusMessage" style="font-weight:600;">Press start to begin recording 🎤</p>
+        </div>
+      </div>
+
+      <!-- Results card -->
+      <div class="card p-6" id="results" hidden style="border-radius:1.5rem;">
+        <h2 class="font-800 text-gray-800 mb-5 flex items-center gap-2" style="font-weight:800;">🏆 Your Results!</h2>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs font-800 uppercase tracking-widest text-gray-400 mb-2" style="font-weight:800;">What you said 🗣️</p>
+            <div id="transcriptText" class="rounded-2xl bg-[#f0faf5] border-2 border-[#d0ece3] px-4 py-3 text-sm font-700 text-gray-700" style="font-weight:700;">—</div>
           </div>
-          <div class="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
-            <p class="text-xs uppercase tracking-wide text-slate-300/70">Status</p>
-            <p id="attentionStatus" class="mt-2 text-base font-semibold text-white">Camera idle</p>
+          <div class="flex items-center justify-between rounded-2xl bg-purple-50 border-2 border-purple-100 px-5 py-4">
+            <div>
+              <p class="text-xs font-800 uppercase tracking-widest text-purple-400 mb-1" style="font-weight:800;">Score 🌟</p>
+              <p id="scoreValue" class="text-5xl font-900 text-purple-600" style="font-weight:900;">0%</p>
+            </div>
+            <div class="text-5xl animate-bounce-slow" id="scoreEmoji">🎉</div>
           </div>
         </div>
-        <div class="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200/90">
-          <p class="text-xs uppercase tracking-wide text-slate-300/70">Last Recording Average</p>
-          <p id="attentionAverage" class="mt-2 text-2xl font-semibold text-emerald-300">--%</p>
+      </div>
+
+    </div>
+
+    <!-- Right col: attention tracking -->
+    <div class="space-y-5" id="attentionSection">
+      <div class="card p-6" style="border-radius:1.5rem;">
+        <h2 class="font-800 text-gray-800 mb-1 flex items-center gap-2" style="font-weight:800;">
+          👀 Attention Tracker
+        </h2>
+        <p class="text-xs font-600 text-gray-400 mb-4 leading-relaxed" style="font-weight:600;">Make sure you're looking at the screen while speaking! Nothing is recorded.</p>
+
+        <!-- Camera feed -->
+        <div class="relative aspect-video overflow-hidden rounded-2xl border-2 border-[#d0ece3] bg-[#f0faf5]">
+          <video id="attentionVideo" class="h-full w-full object-cover" autoplay muted playsinline></video>
+          <canvas id="attentionCanvas" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
+          <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <div class="text-4xl">📷</div>
+            <p class="text-xs font-700 text-gray-400" style="font-weight:700;">Camera not started</p>
+          </div>
+        </div>
+
+        <!-- Camera buttons -->
+        <div class="mt-4 flex gap-2">
+          <button id="startCameraBtn" class="btn-success flex-1 text-xs py-2.5">Start camera 📸</button>
+          <button id="stopCameraBtn" disabled class="btn-outline flex-1 text-xs py-2.5 disabled:opacity-40 disabled:cursor-not-allowed">Stop</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <div class="rounded-2xl bg-[#f0faf5] border-2 border-[#d0ece3] p-3 text-center">
+            <p class="text-[10px] font-800 uppercase tracking-widest text-gray-400 mb-1" style="font-weight:800;">Attention</p>
+            <p id="attentionScore" class="text-2xl font-900 text-teal-500" style="font-weight:900;">--%</p>
+          </div>
+          <div class="rounded-2xl bg-[#f0faf5] border-2 border-[#d0ece3] p-3 text-center">
+            <p class="text-[10px] font-800 uppercase tracking-widest text-gray-400 mb-1" style="font-weight:800;">Status</p>
+            <p id="attentionStatus" class="text-sm font-800 text-gray-500" style="font-weight:800;">Idle 😴</p>
+          </div>
+        </div>
+        <div class="mt-3 rounded-2xl bg-[#f0faf5] border-2 border-[#d0ece3] p-3">
+          <p class="text-[10px] font-800 uppercase tracking-widest text-gray-400 mb-1" style="font-weight:800;">Last recording avg</p>
+          <p id="attentionAverage" class="text-2xl font-900 text-teal-500" style="font-weight:900;">--%</p>
         </div>
       </div>
-      <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-        <video id="attentionVideo" class="h-full w-full object-cover" autoplay muted playsinline></video>
-        <canvas id="attentionCanvas" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
+
+      <!-- Tips card -->
+      <div class="card p-6" style="border-radius:1.5rem;background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+        <h3 class="font-800 text-purple-700 mb-3" style="font-weight:800;">💡 Tips for a great score</h3>
+        <ul class="space-y-2 text-sm font-600 text-purple-600" style="font-weight:600;">
+          <li class="flex items-start gap-2"><span>🔇</span> Find a quiet place</li>
+          <li class="flex items-start gap-2"><span>🐢</span> Speak slowly and clearly</li>
+          <li class="flex items-start gap-2"><span>📍</span> Stay close to your device</li>
+          <li class="flex items-start gap-2"><span>🔁</span> Try again if the score is low</li>
+        </ul>
       </div>
     </div>
-  </section>
 
-  <section class="rounded-3xl border border-white/10 bg-slate-900/50 p-6 shadow-panel backdrop-blur-xl" id="results" hidden>
-    <h2 class="font-display text-lg font-semibold text-white">Results</h2>
-    <dl class="mt-4 space-y-3 text-sm text-slate-200/90">
-      <div class="flex flex-col gap-1">
-        <dt class="font-semibold uppercase tracking-wide text-xs text-slate-300/70">Transcript</dt>
-        <dd id="transcriptText" class="rounded-xl bg-black/30 px-4 py-3 text-white">-</dd>
-      </div>
-      <div class="flex flex-col gap-1">
-        <dt class="font-semibold uppercase tracking-wide text-xs text-slate-300/70">Similarity Score</dt>
-        <dd id="scoreValue" class="text-2xl font-semibold text-cyan-300">0%</dd>
-      </div>
-    </dl>
-  </section>
-</section>
+  </div>
+</div>
+
+<script>
+  // Update score emoji based on score value
+  const origScoreEl = document.getElementById('scoreValue');
+  const emojiEl = document.getElementById('scoreEmoji');
+  const observer = new MutationObserver(() => {
+    const val = parseInt(origScoreEl.textContent);
+    if (val >= 80) emojiEl.textContent = '🏆';
+    else if (val >= 60) emojiEl.textContent = '🌟';
+    else if (val >= 40) emojiEl.textContent = '👍';
+    else emojiEl.textContent = '💪';
+  });
+  if (origScoreEl) observer.observe(origScoreEl, { childList: true, subtree: true, characterData: true });
+</script>
 {% endblock %}
 
 {% block scripts %}
