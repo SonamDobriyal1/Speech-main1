@@ -12,11 +12,13 @@ from typing import Any, Optional, TYPE_CHECKING
 from urllib.parse import urljoin, urlparse
 
 from dotenv import load_dotenv
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
 from flask_login import (LoginManager, UserMixin, current_user, login_required,
                          login_user, logout_user)
 import whisper
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from voice_lab import extract_first_word, generate_feedback, get_phonemes
 
 try:
     import firebase_admin
@@ -188,6 +190,7 @@ PRACTICE_PARAGRAPHS_COLLECTION = "practice_paragraphs"
 
 WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL", "tiny")
 MODEL_CACHE_DIR = Path(os.environ.get("WHISPER_CACHE_DIR", Path.cwd() / "models"))
+VOICE_LAB_DIR = Path(__file__).parent / "static" / "voice-lab"
 _MODEL: Optional[whisper.Whisper] = None
 
 
@@ -1059,13 +1062,108 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.post("/analyze")
+@login_required
+def analyze_phoneme_audio():
+    if "file" not in request.files:
+        return jsonify({"error": "No audio file provided."}), 400
+
+    audio_file = request.files["file"]
+    if audio_file.filename == "":
+        return jsonify({"error": "Empty audio file."}), 400
+
+    expected_word = (request.form.get("expected_word") or "").strip().lower()
+    contrast_raw = request.form.get("contrast_word")
+    contrast_word = contrast_raw.strip().lower() if contrast_raw else None
+
+    temp_path: str | None = None
+    try:
+        suffix = Path(audio_file.filename).suffix or ".webm"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_audio:
+            audio_file.save(temp_audio.name)
+            temp_path = temp_audio.name
+
+        model = load_model()
+        transcription_result = model.transcribe(temp_path, fp16=False, language="en")
+        transcription = transcription_result.get("text", "").strip().lower()
+
+        spoken_word = extract_first_word(transcription, expected_word)
+        expected_phonemes = get_phonemes(expected_word)
+        spoken_phonemes = get_phonemes(spoken_word)
+        contrast_phonemes = get_phonemes(contrast_word) if contrast_word else None
+
+        feedback_data = generate_feedback(
+            expected_word=expected_word,
+            spoken_word=spoken_word,
+            expected_phonemes=expected_phonemes,
+            spoken_phonemes=spoken_phonemes,
+            contrast_word=contrast_word,
+            contrast_phonemes=contrast_phonemes,
+        )
+
+        return jsonify({
+            "transcription": transcription,
+            "spoken_word": spoken_word,
+            "feedback": feedback_data["message"],
+            "correct": feedback_data["correct"],
+            "error_phoneme": feedback_data["error_phoneme"],
+            "confused_with_pair": feedback_data["confused_with_pair"],
+            "expected_word": expected_word,
+        })
+    except Exception as exc:
+        app.logger.warning("Phoneme analysis failed: %s", exc)
+        return jsonify({
+            "transcription": "",
+            "spoken_word": "",
+            "feedback": "Error processing audio",
+            "correct": False,
+            "error_phoneme": None,
+            "confused_with_pair": False,
+            "expected_word": expected_word,
+        }), 500
+    finally:
+        if temp_path:
+            temp_file = Path(temp_path)
+            if temp_file.exists():
+                try:
+                    temp_file.unlink()
+                except OSError:
+                    pass
+
+
+@app.get("/voice-lab")
+def voice_lab_redirect():
+    return redirect(url_for("voice_lab", path="dashboard"))
+
+
+@app.get("/voice-lab/")
+@app.get("/voice-lab/<path:path>")
+@login_required
+def voice_lab(path: str = ""):
+    if not VOICE_LAB_DIR.exists():
+        abort(503, description="Phoneme Coach is not built yet. Run the frontend build step.")
+
+    if path:
+        asset_path = VOICE_LAB_DIR / path
+        if asset_path.is_file():
+            return send_from_directory(VOICE_LAB_DIR, path)
+
+    index_path = VOICE_LAB_DIR / "index.html"
+    if not index_path.exists():
+        abort(503, description="Phoneme Coach is not built yet. Run the frontend build step.")
+
+    return send_from_directory(VOICE_LAB_DIR, "index.html")
+
+
 @app.get("/health")
 def health_check():
     """Health check endpoint for Render."""
+    voice_lab_ready = (VOICE_LAB_DIR / "index.html").is_file()
     return jsonify({
-        "status": "healthy", 
+        "status": "healthy",
         "model_loaded": _MODEL is not None,
-        "firebase_initialized": FIRESTORE_CLIENT is not None
+        "firebase_initialized": FIRESTORE_CLIENT is not None,
+        "voice_lab_ready": voice_lab_ready,
     }), 200
 
 

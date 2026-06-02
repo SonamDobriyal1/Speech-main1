@@ -6,3 +6,7 @@ models/
 secrets/
 static/video/
 venv311/
+node_modules/
+**/.DS_Store
+sambhav_technovation-main/frontend/node_modules/
+sambhav_technovation-main/backend/temp.wav
