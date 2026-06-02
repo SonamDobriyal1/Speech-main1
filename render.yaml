@@ -1,7 +1,7 @@
 services:
   - type: web
     name: speech-main
-    env: python
+    runtime: python
     plan: free
     buildCommand: bash scripts/render-build.sh
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 1 --timeout 180
@@ -22,3 +22,5 @@ services:
         value: /etc/secrets/firebase-admin-key.json
       - key: NODE_VERSION
         value: 20.18.0
+      - key: PYTHON_VERSION
+        value: 3.12.3

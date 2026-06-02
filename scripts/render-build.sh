@@ -40,13 +40,27 @@ build_frontend() {
 
   echo "==> Building Phoneme Coach frontend"
   cd "$FRONTEND_DIR"
-  npm ci
+
+  # npm ci is strict about lockfile/platform parity; npm install is safer on Render Linux.
+  if ! npm install --no-audit --no-fund; then
+    cd "$ROOT_DIR"
+    if [ -f "$OUTPUT_DIR/index.html" ]; then
+      echo "WARN: npm install failed; using committed Phoneme Coach assets in $OUTPUT_DIR"
+      return 0
+    fi
+    echo "ERROR: npm install failed and no committed Phoneme Coach assets were found"
+    exit 1
+  fi
+
   npm run build
   cd "$ROOT_DIR"
 }
 
 if [ -f "$OUTPUT_DIR/index.html" ] && [ "${SKIP_VOICE_LAB_BUILD:-}" = "1" ]; then
   echo "==> Skipping frontend build (SKIP_VOICE_LAB_BUILD=1)"
+elif [ -f "$OUTPUT_DIR/index.html" ] && [ "${FORCE_VOICE_LAB_BUILD:-}" != "1" ]; then
+  echo "==> Reusing committed Phoneme Coach build in $OUTPUT_DIR"
+  echo "    Set FORCE_VOICE_LAB_BUILD=1 to rebuild from source on deploy"
 else
   build_frontend
 fi
